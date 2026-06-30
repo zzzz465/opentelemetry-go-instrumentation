@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
@@ -199,9 +198,9 @@ type event struct {
 }
 
 func processFn(e *event) ptrace.SpanSlice {
-	path := unix.ByteSliceToString(e.Path[:])
-	method := unix.ByteSliceToString(e.Method[:])
-	patternPath := unix.ByteSliceToString(e.PathPattern[:])
+	path := http.SafeString(e.Path[:])
+	method := http.SafeString(e.Method[:])
+	patternPath := http.SafeString(e.PathPattern[:])
 
 	isValidPatternPath := true
 	patternPath, err := http.ParsePattern(patternPath)
@@ -209,7 +208,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		isValidPatternPath = false
 	}
 
-	proto := unix.ByteSliceToString(e.Proto[:])
+	proto := http.SafeString(e.Proto[:])
 
 	// https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes
 	const maxStatus = 599
