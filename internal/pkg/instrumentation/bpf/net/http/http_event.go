@@ -19,10 +19,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+func SafeString(b []byte) string {
+	return strings.ToValidUTF8(unix.ByteSliceToString(b), "?")
+}
+
 func ServerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
 	var portString string
 	var e error
-	hostString := unix.ByteSliceToString(host)
+	hostString := SafeString(host)
 
 	if strings.Contains(hostString, ":") {
 		if hostString, portString, e = net.SplitHostPort(hostString); e == nil {
@@ -41,7 +45,7 @@ func ServerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
 func NetPeerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
 	var portString string
 	var e error
-	hostString := unix.ByteSliceToString(host)
+	hostString := SafeString(host)
 
 	if strings.Contains(hostString, ":") {
 		if hostString, portString, e = net.SplitHostPort(hostString); e == nil {

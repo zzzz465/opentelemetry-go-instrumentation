@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -329,7 +330,7 @@ type processor struct {
 
 func (p *processor) processFn(e *event) ptrace.SpanSlice {
 	p.Logger.Debug("processing event", "event", e)
-	method := unix.ByteSliceToString(e.Method[:])
+	method := strings.ToValidUTF8(unix.ByteSliceToString(e.Method[:]), "?")
 
 	spans := ptrace.NewSpanSlice()
 	span := spans.AppendEmpty()

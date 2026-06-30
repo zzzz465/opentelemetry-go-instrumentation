@@ -3,7 +3,11 @@
 
 package kernel
 
-import "github.com/Masterminds/semver/v3"
+import (
+	"os"
+
+	"github.com/Masterminds/semver/v3"
+)
 
 // lockBPFProbeWriteUserVer is the kernel version that locked down bpf_probe_write_user.
 var lockBPFProbeWriteUserVer = semver.New(5, 14, 0, "", "")
@@ -12,6 +16,11 @@ var lockBPFProbeWriteUserVer = semver.New(5, 14, 0, "", "")
 // bpf_probe_write_user. It will check for supported versions of the Linux
 // kernel and then verify if /sys/kernel/security/lockdown is not locked down.
 func SupportsContextPropagation() bool {
+	if os.Getenv("OTEL_GO_AUTO_DISABLE_WRITE_USER_PROBES") == "true" ||
+		os.Getenv("OTEL_GO_AUTO_DISABLE_WRITE_USER_PROBES") == "1" {
+		return false
+	}
+
 	ver := Version()
 	if ver == nil {
 		return false

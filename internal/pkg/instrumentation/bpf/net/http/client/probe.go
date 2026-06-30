@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -197,16 +196,16 @@ type event struct {
 }
 
 func processFn(e *event) ptrace.SpanSlice {
-	method := unix.ByteSliceToString(e.Method[:])
-	path := unix.ByteSliceToString(e.Path[:])
-	scheme := unix.ByteSliceToString(e.Scheme[:])
-	opaque := unix.ByteSliceToString(e.Opaque[:])
-	host := unix.ByteSliceToString(e.Host[:])
-	rawPath := unix.ByteSliceToString(e.RawPath[:])
-	rawQuery := unix.ByteSliceToString(e.RawQuery[:])
-	username := unix.ByteSliceToString(e.Username[:])
-	fragment := unix.ByteSliceToString(e.Fragment[:])
-	rawFragment := unix.ByteSliceToString(e.RawFragment[:])
+	method := http.SafeString(e.Method[:])
+	path := http.SafeString(e.Path[:])
+	scheme := http.SafeString(e.Scheme[:])
+	opaque := http.SafeString(e.Opaque[:])
+	host := http.SafeString(e.Host[:])
+	rawPath := http.SafeString(e.RawPath[:])
+	rawQuery := http.SafeString(e.RawQuery[:])
+	username := http.SafeString(e.Username[:])
+	fragment := http.SafeString(e.Fragment[:])
+	rawFragment := http.SafeString(e.RawFragment[:])
 	forceQuery := e.ForceQuery != 0
 	omitHost := e.OmitHost != 0
 	var user *url.Userinfo
@@ -258,7 +257,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		attrs = append(attrs, serverPort)
 	}
 
-	proto := unix.ByteSliceToString(e.Proto[:])
+	proto := http.SafeString(e.Proto[:])
 	if proto != "" {
 		parts := strings.Split(proto, "/")
 		if len(parts) == 2 {

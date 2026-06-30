@@ -37,6 +37,8 @@ import (
 // envLogLevelKey is the key for the environment variable value containing the log level.
 const envLogLevelKey = "OTEL_LOG_LEVEL"
 
+const envDisableWriteUserProbesKey = "OTEL_GO_AUTO_DISABLE_WRITE_USER_PROBES"
+
 // Instrumentation manages and controls all OpenTelemetry Go
 // auto-instrumentation.
 type Instrumentation struct {
@@ -66,16 +68,26 @@ func NewInstrumentation(
 	}
 
 	p := []probe.Probe{
-		grpcClient.New(c.logger, Version()),
 		grpcServer.New(c.logger, Version()),
 		httpServer.New(c.logger, Version()),
 		httpClient.New(c.logger, Version()),
-		dbSql.New(c.logger, Version()),
-		kafkaProducer.New(c.logger, Version()),
 		kafkaConsumer.New(c.logger, Version()),
-		autosdk.New(c.logger),
-		otelTrace.New(c.logger),
-		otelTraceGlobal.New(c.logger),
+	}
+	if writeUserProbesDisabled() {
+		c.logger.Warn(
+			"disabling probes that use bpf_probe_write_user or mutate Go call state",
+			"env", envDisableWriteUserProbesKey,
+		)
+	} else {
+		p = append(
+			p,
+			dbSql.New(c.logger, Version()),
+			grpcClient.New(c.logger, Version()),
+			kafkaProducer.New(c.logger, Version()),
+			autosdk.New(c.logger),
+			otelTrace.New(c.logger),
+			otelTraceGlobal.New(c.logger),
+		)
 	}
 
 	cp := convertConfigProvider(c.cp)
@@ -85,6 +97,11 @@ func NewInstrumentation(
 	}
 
 	return &Instrumentation{manager: mngr, cleanup: c.handlerClose}, nil
+}
+
+func writeUserProbesDisabled() bool {
+	return os.Getenv(envDisableWriteUserProbesKey) == "true" ||
+		os.Getenv(envDisableWriteUserProbesKey) == "1"
 }
 
 // Load loads and attaches the relevant probes to the target process.
