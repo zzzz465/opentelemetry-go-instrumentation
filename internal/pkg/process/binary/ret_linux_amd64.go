@@ -10,11 +10,7 @@ import (
 )
 
 func findRetInstructions(data []byte) ([]uint64, error) {
-	nInt := len(data)
-	if nInt < 0 {
-		return nil, fmt.Errorf("invalid data length: %d", nInt)
-	}
-	n := uint64(nInt)
+	n := uint64(len(data))
 
 	var returnOffsets []uint64
 	var index uint64
