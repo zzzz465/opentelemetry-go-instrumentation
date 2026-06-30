@@ -71,17 +71,17 @@ func NewInstrumentation(
 		grpcServer.New(c.logger, Version()),
 		httpServer.New(c.logger, Version()),
 		httpClient.New(c.logger, Version()),
-		dbSql.New(c.logger, Version()),
 		kafkaConsumer.New(c.logger, Version()),
 	}
 	if writeUserProbesDisabled() {
 		c.logger.Warn(
-			"disabling probes that use bpf_probe_write_user",
+			"disabling probes that use bpf_probe_write_user or mutate Go call state",
 			"env", envDisableWriteUserProbesKey,
 		)
 	} else {
 		p = append(
 			p,
+			dbSql.New(c.logger, Version()),
 			grpcClient.New(c.logger, Version()),
 			kafkaProducer.New(c.logger, Version()),
 			autosdk.New(c.logger),
