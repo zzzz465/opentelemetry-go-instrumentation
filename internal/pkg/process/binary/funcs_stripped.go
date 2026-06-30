@@ -30,19 +30,10 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]any) ([]*Fun
 		return nil, errors.New(".gopclntab section too small")
 	}
 
-	// we extract the `textStart` value based on the header of the pclntab,
-	// this is used to parse the line number table, and is not necessarily the start of the `.text` section.
-	// when a binary is build with C code, the value of `textStart` is not the same as the start of the `.text` section.
-	// https://github.com/golang/go/blob/master/src/runtime/symtab.go#L374
-	var runtimeText uint64
-	ptrSize := uint32(pclndat[7])
-	switch ptrSize {
-	case 4:
-		runtimeText = uint64(binary.LittleEndian.Uint32(pclndat[8+2*ptrSize:]))
-	case 8:
-		runtimeText = binary.LittleEndian.Uint64(pclndat[8+2*ptrSize:])
-	default:
-		return nil, errors.New("invalid pointer size of text section of .gopclntab")
+	text := elfF.Section(".text")
+	runtimeText, err := runtimeTextFromPclntab(pclndat, text)
+	if err != nil {
+		return nil, err
 	}
 
 	pcln := gosym.NewLineTable(pclndat, runtimeText)
@@ -119,4 +110,31 @@ func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, er
 	}
 
 	return off, retOffsets, nil
+}
+
+func runtimeTextFromPclntab(pclndat []byte, text *elf.Section) (uint64, error) {
+	// We extract the `textStart` value based on the header of the pclntab.
+	// This is used to parse the line number table, and is not necessarily the
+	// start of the `.text` section. When a binary is built with C code, the
+	// value of `textStart` is not the same as the start of the `.text` section.
+	// https://github.com/golang/go/blob/master/src/runtime/symtab.go#L374
+	var runtimeText uint64
+	ptrSize := uint32(pclndat[7])
+	switch ptrSize {
+	case 4:
+		runtimeText = uint64(binary.LittleEndian.Uint32(pclndat[8+2*ptrSize:]))
+	case 8:
+		runtimeText = binary.LittleEndian.Uint64(pclndat[8+2*ptrSize:])
+	default:
+		return 0, errors.New("invalid pointer size of text section of .gopclntab")
+	}
+
+	// Some stripped Go binaries built with external linking can contain a zero
+	// textStart in .gopclntab. Fall back to the ELF .text address so gosym
+	// returns function entries that can be read from the executable section.
+	if runtimeText == 0 && text != nil {
+		return text.Addr, nil
+	}
+
+	return runtimeText, nil
 }
